@@ -1,7 +1,6 @@
 package main
 
-import ("github.com/gofiber/fiber/v2"
-"os")
+import ("github.com/gofiber/fiber/v2")
 
 func main() {
     app := fiber.New()
@@ -9,8 +8,10 @@ func main() {
     app.Get("/", func(c *fiber.Ctx) error {
         return c.SendString("Hello, World!")
     })
+		app.Get("/home", func(c *fiber.Ctx) error {
+			return c.SendString("Hello, World Again!")
+	})
 
-		port := os.Getenv("PORT")
 
-    app.Listen(":" + port)
+    app.Listen(":3000")
 }
