@@ -39,6 +39,64 @@ func main() {
 		return c.Status(fiber.StatusOK).JSON(tasks)
 	})
 
+	app.Post("/tasks", func(c *fiber.Ctx) error {
+		var task Task
+		if err := c.BodyParser(&task); err != nil {
+			return err
+		}
+
+		if err := db.Create(&task).Error; err != nil {
+			return err
+		}
+
+		return c.Status(fiber.StatusCreated).JSON(task)
+	})
+
+	app.Put("/tasks/:id", func(c *fiber.Ctx) error {
+		id := c.Params("id")
+
+		var task Task
+		if err := db.First(&task, id).Error; err != nil {
+			return c.Status(fiber.StatusNotFound).SendString("task not found")
+		}
+
+		var updatedTask Task
+		if err := c.BodyParser(&updatedTask); err != nil {
+			return err
+		}
+
+		if updatedTask.Description != "" {
+			task.Description = updatedTask.Description
+		}
+		if updatedTask.Completed != task.Completed {
+			task.Completed = updatedTask.Completed
+		}
+		if updatedTask.Deadline != task.Deadline {
+			task.Deadline = updatedTask.Deadline
+		}
+
+		if err := db.Save(&task).Error; err != nil {
+			return err
+		}
+
+		return c.Status(fiber.StatusOK).JSON(task)
+	})
+
+	app.Delete("/tasks/:id", func(c *fiber.Ctx) error {
+		id := c.Params("id")
+
+		var task Task
+		if err := db.First(&task, id).Error; err != nil {
+			return c.Status(fiber.StatusNotFound).SendString("task not found")
+		}
+
+		if err := db.Delete(&task).Error; err != nil {
+			return err
+		}
+
+		return c.Status(fiber.StatusAccepted).SendString("task deleted")
+	})
+
 	port := os.Getenv("PORT")
 
 	if port == "" {
