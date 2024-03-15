@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/driver/postgres"
@@ -10,10 +9,10 @@ import (
 )
 
 type Category struct {
-	ID           uint      `gorm:"primaryKey"`
-	Title        string    `json:"title"`
-	LastModified time.Time `json:"last_modified"`
-	Todos        []Task    `gorm:"foreignKey:CategoryID"`
+	ID           uint   `gorm:"primaryKey"`
+	Title        string `json:"title"`
+	LastModified string `json:"last_modified"`
+	Todos        []Task `gorm:"foreignKey:CategoryID"`
 }
 type Task struct {
 	ID          uint   `gorm:"primaryKey"`
