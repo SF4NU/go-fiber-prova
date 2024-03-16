@@ -4,25 +4,11 @@ import (
 	"os"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/sf4nu/todo-fiber-prova-server/models"
+	"github.com/sf4nu/todo-fiber-prova-server/utils"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
-
-type Category struct {
-	ID           uint   `gorm:"primaryKey"`
-	Title        string `json:"title"`
-	LastModified string `json:"last_modified"`
-	DisplayOrder int    `gorm:"column:display_order"`
-	Todos        []Task `gorm:"foreignKey:CategoryID"`
-}
-type Task struct {
-	ID           uint   `gorm:"primaryKey"`
-	Description  string `json:"description"`
-	Completed    bool   `json:"completed"`
-	LastModified string `json:"last_modified"`
-	CategoryID   uint   `json:"category_id"`
-	DisplayOrder int    `gorm:"column:display_order"`
-} //la relazione è one-to-many cioè uno a molti perché la tabella categorie è assocciata a più tabelle task
 
 func main() {
 	dsn := "postgres://ryfljouh:dhohPc3uydQ006hRhGsulapMesD4MLFd@dumbo.db.elephantsql.com/ryfljouh" //l'url con username e password per permettere al server di collegarsi al db su elephant sql
@@ -30,7 +16,7 @@ func main() {
 	if err != nil {
 		panic("db not connected")
 	}
-	db.AutoMigrate(&Category{}, &Task{}) //crea automaticamente le tabelle se non sono già presenti
+	db.AutoMigrate(&models.User{}, &models.Category{}, &models.Task{}) //crea automaticamente le tabelle se non sono già presenti
 
 	app := fiber.New() //fa partire il server
 
@@ -56,7 +42,7 @@ func main() {
 	// })
 
 	app.Get("/categories", func(c *fiber.Ctx) error {
-		var categories []Category
+		var categories []models.Category
 		db.Find(&categories)
 		return c.Status(fiber.StatusOK).JSON(categories)
 	})
@@ -64,7 +50,7 @@ func main() {
 	app.Get("/categories/:id/tasks", func(c *fiber.Ctx) error {
 		categoryID := c.Params("id")
 
-		var category Category
+		var category models.Category
 		if err := db.Preload("Todos").First(&category, categoryID).Error; err != nil {
 			return c.Status(fiber.StatusNotFound).SendString("Category not found")
 		}
@@ -73,7 +59,7 @@ func main() {
 	})
 
 	app.Post("/tasks", func(c *fiber.Ctx) error {
-		var task Task
+		var task models.Task
 		if err := c.BodyParser(&task); err != nil {
 			return err
 		}
@@ -84,9 +70,50 @@ func main() {
 
 		return c.Status(fiber.StatusCreated).JSON(task)
 	})
+	app.Post("/registration", func(c *fiber.Ctx) error {
+		var user models.User
+		if err := c.BodyParser(&user); err != nil {
+			return err
+		}
+
+		if err := db.Where("username = ?", user.Username).First(&user).Error; err == nil {
+			return c.Status(fiber.StatusUnauthorized).SendString("Username already exists")
+		}
+
+		hashedPassword, err := utils.HashPassword(user.Password)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).SendString("Password can't be hashed")
+		}
+
+		user.Password = hashedPassword
+
+		if err := db.Create(&user).Error; err != nil {
+			return err
+		}
+
+		return c.Status(fiber.StatusCreated).JSON(user)
+	})
+
+	app.Post("/login", func(c *fiber.Ctx) error {
+		var loginRequest models.LoginRequest
+		if err := c.BodyParser(&loginRequest); err != nil {
+			return err
+		}
+
+		var user models.User
+		if err := db.Where("username = ?", loginRequest.Username).First(&user).Error; err != nil {
+			return c.Status(fiber.StatusUnauthorized).SendString("Invalid username or password")
+		}
+
+		if err := utils.CheckPassword(loginRequest.Password, user.Password); err != nil {
+			return c.Status(fiber.StatusUnauthorized).SendString("Invalid username or password")
+		}
+
+		return c.SendString("Login successful")
+	})
 
 	app.Post("/categories", func(c *fiber.Ctx) error {
-		var category Category
+		var category models.Category
 		if err := c.BodyParser(&category); err != nil {
 			return err
 		}
@@ -101,12 +128,12 @@ func main() {
 	app.Put("/tasks/:id", func(c *fiber.Ctx) error {
 		id := c.Params("id")
 
-		var task Task
+		var task models.Task
 		if err := db.First(&task, id).Error; err != nil {
 			return c.Status(fiber.StatusNotFound).SendString("task not found")
 		}
 
-		var updatedTask Task
+		var updatedTask models.Task
 		if err := c.BodyParser(&updatedTask); err != nil {
 			return err
 		}
@@ -131,12 +158,12 @@ func main() {
 	app.Put("/categories/:id", func(c *fiber.Ctx) error {
 		id := c.Params("id")
 
-		var category Category
+		var category models.Category
 		if err := db.First(&category, id).Error; err != nil {
 			return c.Status(fiber.StatusNotFound).SendString("category not found")
 		}
 
-		var updatedCategory Category
+		var updatedCategory models.Category
 		if err := c.BodyParser(&updatedCategory); err != nil {
 			return err
 		}
@@ -159,12 +186,12 @@ func main() {
 	app.Delete("/tasks/:id", func(c *fiber.Ctx) error {
 		id := c.Params("id")
 
-		var task Task
+		var task models.Task
 		if err := db.First(&task, id).Error; err != nil {
 			return c.Status(fiber.StatusNotFound).SendString("task not found")
 		}
 
-		var category Category
+		var category models.Category
 		if err := db.First(&category, task.CategoryID).Error; err != nil {
 			return c.Status(fiber.StatusNotFound).SendString("Category related not found")
 		}
@@ -183,12 +210,12 @@ func main() {
 	app.Delete("/categories/:id", func(c *fiber.Ctx) error {
 		id := c.Params("id")
 
-		var category Category
+		var category models.Category
 		if err := db.First(&category, id).Error; err != nil {
 			return c.Status(fiber.StatusNotFound).SendString("category not found")
 		}
 
-		var tasks []Task
+		var tasks []models.Task
 		if err := db.Where("category_id = ?", category.ID).Find(&tasks).Error; err != nil {
 			return c.Status(fiber.StatusNotFound).SendString("no match")
 		}
