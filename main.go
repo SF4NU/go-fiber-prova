@@ -12,6 +12,7 @@ type Category struct {
 	ID           uint   `gorm:"primaryKey"`
 	Title        string `json:"title"`
 	LastModified string `json:"last_modified"`
+	DisplayOrder int    `gorm:"column:display_order"`
 	Todos        []Task `gorm:"foreignKey:CategoryID"`
 }
 type Task struct {
@@ -20,6 +21,7 @@ type Task struct {
 	Completed    bool   `json:"completed"`
 	LastModified string `json:"last_modified"`
 	CategoryID   uint   `json:"category_id"`
+	DisplayOrder int    `gorm:"column:display_order"`
 } //la relazione è one-to-many cioè uno a molti perché la tabella categorie è assocciata a più tabelle task
 
 func main() {
