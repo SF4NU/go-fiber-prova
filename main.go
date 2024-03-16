@@ -41,22 +41,33 @@ func main() {
 			return nil
 		}
 		return c.Next()
-	}) //tutta questa app.use è il cors, quindi serve ad ammettere le connessioni esterne all'api
+	}) //tutta questa app.Use è il cors, quindi serve ad ammettere le connessioni esterne all'api
 
-	app.Get("/", func(c *fiber.Ctx) error { //il metodo get per ottenere la lista dei vari todo
+	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Todo-api")
 	})
 
-	app.Get("/tasks", func(c *fiber.Ctx) error {
-		var tasks []Task
-		db.Find(&tasks)
-		return c.Status(fiber.StatusOK).JSON(tasks)
-	})
+	// app.Get("/tasks", func(c *fiber.Ctx) error {
+	// 	var tasks []Task
+	// 	db.Find(&tasks)
+	// 	return c.Status(fiber.StatusOK).JSON(tasks)
+	// })
 
 	app.Get("/categories", func(c *fiber.Ctx) error {
 		var categories []Category
 		db.Find(&categories)
 		return c.Status(fiber.StatusOK).JSON(categories)
+	})
+
+	app.Get("/categories/:id/tasks", func(c *fiber.Ctx) error {
+		categoryID := c.Params("id")
+
+		var category Category
+		if err := db.Preload("Todos").First(&category, categoryID).Error; err != nil {
+			return c.Status(fiber.StatusNotFound).SendString("Category not found")
+		}
+
+		return c.JSON(category.Todos)
 	})
 
 	app.Post("/tasks", func(c *fiber.Ctx) error {
@@ -151,6 +162,15 @@ func main() {
 			return c.Status(fiber.StatusNotFound).SendString("task not found")
 		}
 
+		var category Category
+		if err := db.First(&category, task.CategoryID).Error; err != nil {
+			return c.Status(fiber.StatusNotFound).SendString("Category related not found")
+		}
+
+		if task.CategoryID != category.ID {
+			return c.Status(fiber.StatusNotFound).SendString("task does not belong to the category")
+		}
+
 		if err := db.Delete(&task).Error; err != nil {
 			return err
 		}
@@ -164,6 +184,17 @@ func main() {
 		var category Category
 		if err := db.First(&category, id).Error; err != nil {
 			return c.Status(fiber.StatusNotFound).SendString("category not found")
+		}
+
+		var tasks []Task
+		if err := db.Where("category_id = ?", category.ID).Find(&tasks).Error; err != nil {
+			return c.Status(fiber.StatusNotFound).SendString("no match")
+		}
+
+		for _, task := range tasks {
+			if err := db.Delete(&task).Error; err != nil {
+				return err
+			}
 		}
 
 		if err := db.Delete(&category).Error; err != nil {
