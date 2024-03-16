@@ -18,7 +18,6 @@ type Task struct {
 	ID          uint   `gorm:"primaryKey"`
 	Description string `json:"description"`
 	Completed   bool   `json:"completed"`
-	Deadline    string `json:"deadline"`
 	CategoryID  uint   `json:"category_id"`
 } //la relazione è one-to-many cioè uno a molti perché la tabella categorie è assocciata a più tabelle task
 
@@ -114,9 +113,6 @@ func main() {
 		}
 		if updatedTask.Completed != task.Completed {
 			task.Completed = updatedTask.Completed
-		}
-		if updatedTask.Deadline != task.Deadline {
-			task.Deadline = updatedTask.Deadline
 		}
 
 		if err := db.Save(&task).Error; err != nil {
