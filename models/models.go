@@ -16,6 +16,7 @@ type Category struct {
 	Title        string `json:"title"`
 	LastModified string `json:"last_modified"`
 	UserID       uint   `json:"user_id"`
+	IsLoading    bool   `json:"is_loading"`
 	Todos        []Task `gorm:"foreignKey:CategoryID"`
 }
 type Task struct {
@@ -23,5 +24,6 @@ type Task struct {
 	Description  string `json:"description"`
 	Completed    bool   `json:"completed"`
 	LastModified string `json:"last_modified"`
+	IsLoading    bool   `json:"is_loading"`
 	CategoryID   uint   `json:"category_id"`
 } //la relazione è one-to-many cioè uno a molti perché la tabella categorie è assocciata a più tabelle task
