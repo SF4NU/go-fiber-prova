@@ -58,6 +58,17 @@ func main() {
 		return c.JSON(category.Todos)
 	})
 
+	app.Get("/users/:userID/categories", func(c *fiber.Ctx) error {
+		userID := c.Params("userID")
+
+		var categories []models.Category
+		if err := db.Where("user_id = ?", userID).Find(&categories).Error; err != nil {
+			return c.Status(fiber.StatusNotFound).SendString("Category not found")
+		}
+
+		return c.JSON(categories)
+	})
+
 	app.Post("/tasks", func(c *fiber.Ctx) error {
 		var task models.Task
 		if err := c.BodyParser(&task); err != nil {
