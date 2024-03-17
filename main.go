@@ -109,7 +109,7 @@ func main() {
 			return c.Status(fiber.StatusUnauthorized).SendString("Invalid username or password")
 		}
 
-		return c.SendString("Login successful")
+		return c.JSON(fiber.Map{"user_id": user.ID})
 	})
 
 	app.Post("/categories", func(c *fiber.Ctx) error {
